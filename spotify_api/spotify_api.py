@@ -63,3 +63,7 @@ class SpotifyApi:
         tracks = [x['track']['name'] for x in tracks_raw['items']]
         for track in tracks:
             logger.info(track)
+
+
+def func_to_test(n: int) -> int:
+    return n+1
