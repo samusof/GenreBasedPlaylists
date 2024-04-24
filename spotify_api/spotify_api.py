@@ -1,9 +1,17 @@
+import configparser
 from configparser import ConfigParser
 import json
+from json import JSONDecodeError
+
 import spotipy
 
 from app_logging.logger import logger
 from spotipy.oauth2 import SpotifyOAuth
+
+from main.config import CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY
+
+CLIENT_ID_KEY = 'client_id'
+CLIENT_SECRET_KEY = 'client_secret'
 
 
 class SpotifyApiCredentialLoader:
@@ -13,12 +21,32 @@ class SpotifyApiCredentialLoader:
     def __init__(self, config: ConfigParser):
         self._populate_credentials(config)
 
+    def _get_spotify_credentials_file_data_from_config(self, config: ConfigParser) -> dict:
+        try:
+            credential_file_name: str = config.get(CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY)
+            try:
+                with open(credential_file_name, 'r') as creds_file:
+                    try:
+                        creds_json: json = json.loads(creds_file.read())
+                        return creds_json
+                    except JSONDecodeError as jde:
+                        logger.error('Credential file not in json format')
+                        raise jde
+            except IOError as ioe:
+                logger.error("No Spotify credentials file found at {}".format(credential_file_name))
+                raise ioe
+        except configparser.NoOptionError as noe:
+            logger.error('{} not set in config file'.format(CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY))
+            raise noe
+
     def _populate_credentials(self, config: ConfigParser) -> None:
-        credential_file_name = config.get("DEFAULT", "SpotifyClientCredentialsLocation")
-        with open(credential_file_name, 'r') as creds:
-            creds_json: json = json.loads(creds.read())
-            self._client_id = creds_json["client_id"]
-            self._client_secret = creds_json["client_secret"]
+        creds_json: dict = self._get_spotify_credentials_file_data_from_config(config)
+        try:
+            self._client_id = creds_json[CLIENT_ID_KEY]
+            self._client_secret = creds_json[CLIENT_SECRET_KEY]
+        except KeyError as ke:
+            logger.error("Spotify credentials file is missing some credentials.")
+            raise ke
 
     def get_client_id(self) -> str:
         return self._client_id
@@ -28,7 +56,6 @@ class SpotifyApiCredentialLoader:
 
 
 class SpotifyApi:
-
     _client_id: str
     _client_secret: str
     _redirect_uri: str
@@ -36,8 +63,8 @@ class SpotifyApi:
     _spotify_api: spotipy.Spotify
     _credential_loader: SpotifyApiCredentialLoader
 
-    def __init__(self, config: ConfigParser):
-        self._credential_loader = SpotifyApiCredentialLoader(config)
+    def __init__(self, spotify_credential_loader: SpotifyApiCredentialLoader):
+        self._credential_loader = spotify_credential_loader
         self._populate_credentials()
         self._redirect_uri = 'http://localhost:3000'
         self._scope = 'user-library-read'
@@ -52,7 +79,6 @@ class SpotifyApi:
             scope=self._scope))
 
     def _populate_credentials(self):
-        # logger.info("reading credentials from file: {}".format(file_name))
         self._client_id = self._credential_loader.get_client_id()
         self._client_secret = self._credential_loader.get_client_secret()
 
@@ -63,7 +89,3 @@ class SpotifyApi:
         tracks = [x['track']['name'] for x in tracks_raw['items']]
         for track in tracks:
             logger.info(track)
-
-
-def func_to_test(n: int) -> int:
-    return n+1
