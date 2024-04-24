@@ -1,4 +1,4 @@
-from spotify_api.spotify_api import SpotifyApi, SpotifyApiCredentialLoader
+from src.spotify.spotify_api import SpotifyApi, SpotifyApiCredentialLoader
 from config import config
 
 

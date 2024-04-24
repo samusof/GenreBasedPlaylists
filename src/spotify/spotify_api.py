@@ -5,10 +5,10 @@ from json import JSONDecodeError
 
 import spotipy
 
-from app_logging.logger import logger
+from src.app_logging.logger import logger
 from spotipy.oauth2 import SpotifyOAuth
 
-from main.config import CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY
+from src.config import CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY
 
 CLIENT_ID_KEY = 'client_id'
 CLIENT_SECRET_KEY = 'client_secret'

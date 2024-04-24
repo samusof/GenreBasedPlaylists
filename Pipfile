@@ -4,9 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-spotipy = "2.22.1"
+spotipy = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+python_version = "3.12"
