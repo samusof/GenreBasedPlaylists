@@ -20,7 +20,6 @@ INVALID_CREDENTIALS_FILE_MISSING_FIELD = json.dumps({CLIENT_SECRET_KEY: TEST_CLI
 @pytest.mark.usefixtures("mock_config")
 @pytest.mark.usefixtures("mock_malformed_config")
 class TestSpotifyCredentialLoader(unittest.TestCase):
-    config: ConfigParser
 
     def setUp(self):
         pass

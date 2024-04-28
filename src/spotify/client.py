@@ -2,14 +2,15 @@ import configparser
 from configparser import ConfigParser
 import json
 from json import JSONDecodeError
-from typing import List, Optional
+from typing import List
 
 import spotipy
 
+from spotify.models import SpotifyAddedTrack
 from src.app_logging.logger import logger
 from spotipy.oauth2 import SpotifyOAuth
 
-from src.config import CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY, config
+from src.config import CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY
 
 CLIENT_ID_KEY = 'client_id'
 CLIENT_SECRET_KEY = 'client_secret'
@@ -56,12 +57,12 @@ class SpotifyApiCredentialLoader:
         return self._client_secret
 
 
-class SpotifyApi:
+class SpotifyClient:
     _client_id: str
     _client_secret: str
     _redirect_uri: str
     _scope: str
-    _spotify_api: spotipy.Spotify
+    _spotipy_api_client: spotipy.Spotify
     _credential_loader: SpotifyApiCredentialLoader
 
     def __init__(self, spotify_credential_loader: SpotifyApiCredentialLoader):
@@ -73,7 +74,7 @@ class SpotifyApi:
 
     def _authorise(self):
         logger.info("authorising using user: {} and pass: {}".format(self._client_id, "*" * len(self._client_secret)))
-        self._spotify_api = spotipy.Spotify(auth_manager=SpotifyOAuth(
+        self._spotipy_api_client = spotipy.Spotify(auth_manager=SpotifyOAuth(
             client_id=self._client_id,
             client_secret=self._client_secret,
             redirect_uri=self._redirect_uri,
@@ -83,34 +84,7 @@ class SpotifyApi:
         self._client_id = self._credential_loader.get_client_id()
         self._client_secret = self._credential_loader.get_client_secret()
 
-    def get_liked_songs(self) -> List[str]:
-        tracks_raw: dict = self._spotify_api.current_user_saved_tracks(limit=50)
-        # with open('out.json', 'w') as file:
-        #     file.write(str(tracks_raw))
-        tracks = [x['track']['name'] for x in tracks_raw['items']]
-        for track in tracks:
-            logger.info(track)
-        return tracks
-
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
-class SpotifyClient(metaclass=Singleton):
-    _client: Optional[SpotifyApi]
-
-    def __init__(self):
-        self._client = None
-
-    def get_client(self) -> SpotifyApi:
-        if self._client is not None:
-            return self._client
-        else:
-            credential_loader = SpotifyApiCredentialLoader(config)
-            return SpotifyApi(credential_loader)
+    def get_liked_songs(self) -> List[SpotifyAddedTrack]:
+        tracks_raw: dict = self._spotipy_api_client.current_user_saved_tracks(limit=50)
+        added_tracks: List[SpotifyAddedTrack] = [SpotifyAddedTrack(**x) for x in tracks_raw['items']]
+        return added_tracks
