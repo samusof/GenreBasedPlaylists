@@ -3,12 +3,11 @@ import json
 from json import JSONDecodeError
 
 from src.config import CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY
-from src.spotify.client import SpotifyApiCredentialLoader
+from src.spotify.credential_provider import SpotifyApiCredentialLoader
 import unittest
 import unittest.mock as mock
 import pytest
-from configparser import ConfigParser
-from src.spotify.client import CLIENT_SECRET_KEY, CLIENT_ID_KEY
+from src.spotify.credential_provider import CLIENT_SECRET_KEY, CLIENT_ID_KEY
 
 TEST_CLIENT_SECRET = 'test_client_secret'
 TEST_CLIENT_ID = 'test_client_id'

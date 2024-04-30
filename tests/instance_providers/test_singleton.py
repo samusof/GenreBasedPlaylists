@@ -19,4 +19,5 @@ class TestSingleton(TestCase):
     def test_give_multiple_instantiations_of_class_should_not_overwrite_data(self):
         object1 = ClassToTest(10)
         object2 = ClassToTest(900)
+        assert object1.value == 10
         assert object2.value == 10

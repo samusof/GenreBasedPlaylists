@@ -1,90 +1,26 @@
-import configparser
-from configparser import ConfigParser
-import json
-from json import JSONDecodeError
-from typing import List
-
-import spotipy
-
+from enum import Enum
+from typing import List, Optional
+from spotipy import Spotify
 from spotify.models import SpotifyAddedTrack
-from src.app_logging.logger import logger
-from spotipy.oauth2 import SpotifyOAuth
-
-from src.config import CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY
-
-CLIENT_ID_KEY = 'client_id'
-CLIENT_SECRET_KEY = 'client_secret'
 
 
-class SpotifyApiCredentialLoader:
-    _client_id: str
-    _client_secret: str
+class SpotifyWebApiScope(str, Enum):
+    USER_LIBRARY_READ = 'user-library-read'
 
-    def __init__(self, config: ConfigParser):
-        self._populate_credentials(config)
 
-    def _get_spotify_credentials_file_data_from_config(self, config: ConfigParser) -> dict:
-        try:
-            credential_file_name: str = config.get(CONFIG_SECTION, CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY)
-            try:
-                with open(credential_file_name, 'r') as creds_file:
-                    try:
-                        creds_json: json = json.loads(creds_file.read())
-                        return creds_json
-                    except JSONDecodeError as jde:
-                        logger.error('Credential file not in json format')
-                        raise jde
-            except IOError as ioe:
-                logger.error("No Spotify credentials file found at {}".format(credential_file_name))
-                raise ioe
-        except configparser.NoOptionError as noe:
-            logger.error('{} not set in config file'.format(CONFIG_SPOTIFY_CREDENTIALS_FILE_NAME_KEY))
-            raise noe
-
-    def _populate_credentials(self, config: ConfigParser) -> None:
-        creds_json: dict = self._get_spotify_credentials_file_data_from_config(config)
-        try:
-            self._client_id = creds_json[CLIENT_ID_KEY]
-            self._client_secret = creds_json[CLIENT_SECRET_KEY]
-        except KeyError as ke:
-            logger.error("Spotify credentials file is missing some credentials.")
-            raise ke
-
-    def get_client_id(self) -> str:
-        return self._client_id
-
-    def get_client_secret(self) -> str:
-        return self._client_secret
+class SpotifyWebApiScopeBuilder:
+    @staticmethod
+    def build_scope_param(scopes: List[SpotifyWebApiScope]) -> str:
+        return " ".join(scopes)
 
 
 class SpotifyClient:
-    _client_id: str
-    _client_secret: str
-    _redirect_uri: str
-    _scope: str
-    _spotipy_api_client: spotipy.Spotify
-    _credential_loader: SpotifyApiCredentialLoader
+    _spotipy_client: Spotify
 
-    def __init__(self, spotify_credential_loader: SpotifyApiCredentialLoader):
-        self._credential_loader = spotify_credential_loader
-        self._populate_credentials()
-        self._redirect_uri = 'http://localhost:3000'
-        self._scope = 'user-library-read'
-        self._authorise()
+    def __init__(self, spotipy_client: Spotify):
+        self._spotipy_client = spotipy_client
 
-    def _authorise(self):
-        logger.info("authorising using user: {} and pass: {}".format(self._client_id, "*" * len(self._client_secret)))
-        self._spotipy_api_client = spotipy.Spotify(auth_manager=SpotifyOAuth(
-            client_id=self._client_id,
-            client_secret=self._client_secret,
-            redirect_uri=self._redirect_uri,
-            scope=self._scope))
-
-    def _populate_credentials(self):
-        self._client_id = self._credential_loader.get_client_id()
-        self._client_secret = self._credential_loader.get_client_secret()
-
-    def get_liked_songs(self) -> List[SpotifyAddedTrack]:
-        tracks_raw: dict = self._spotipy_api_client.current_user_saved_tracks(limit=50)
+    def get_liked_songs(self, offset: Optional[int] = None) -> List[SpotifyAddedTrack]:
+        tracks_raw: dict = self._spotipy_client.current_user_saved_tracks(limit=50, offset=offset)
         added_tracks: List[SpotifyAddedTrack] = [SpotifyAddedTrack(**x) for x in tracks_raw['items']]
         return added_tracks
